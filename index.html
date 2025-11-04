@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <!-- Garante que o site funcione bem em celulares -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Ponto</title>
+    
+    <!-- Carrega o Tailwind CSS (para estilos) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Configuração básica do Tailwind (usando a fonte Inter)
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        /* Ajuste para a animação do modal */
+        #modalFoto.opacity-0 {
+            pointer-events: none;
+        }
+        #modalFoto .modal-content {
+            transition: transform 0.3s ease-out;
+        }
+        #modalFoto.opacity-0 .modal-content {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen font-sans">
+
+    <!-- 1. O FORMULÁRIO PRINCIPAL -->
+    <div class="bg-white p-8 md:p-12 rounded-xl shadow-2xl text-center w-11/12 max-w-lg">
+        <h2 class="text-3xl font-bold text-blue-700 mb-8">Registro de Ponto</h2>
+        
+        <!-- Seletor de Funcionário -->
+        <div class="text-left mb-6">
+            <label for="nomeSelect" class="block mb-2 font-semibold text-gray-700">Funcionário:</label>
+            <select id="nomeSelect" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg">
+                <option value="">-- Selecione seu nome --</option>
+                <option value="Adrian Lima">Adrian Lima</option>
+                <option value="Miriã França">Miriã França</option>
+                <option value="Livia Guedes">Livia Guedes</option>
+                <option value="Quitéria">Quitéria</option>
+            </select>
+        </div>
+
+        <!-- Seletor de Tipo de Registro (Radio Buttons) -->
+        <div class="text-left mb-6">
+            <label class="block mb-3 font-semibold text-gray-700">Tipo de Registro:</label>
+            <fieldset id="tipoFieldset">
+                <!-- Layout em coluna (flex-col) -->
+                <div class="flex flex-col gap-y-3">
+                    
+                    <!-- Opção 1: Entrada -->
+                    <div class="flex items-center">
+                        <input id="tipo-entrada" name="tipoRegistro" type="radio" value="Entrada" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer">
+                        <label for="tipo-entrada" class="ml-3 block text-lg text-gray-800 cursor-pointer">Entrada</label>
+                    </div>
+                    <!-- Opção 2: Saída Almoço -->
+                    <div class="flex items-center">
+                        <input id="tipo-saida-almoco" name="tipoRegistro" type="radio" value="Saída Almoço" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer">
+                        <label for="tipo-saida-almoco" class="ml-3 block text-lg text-gray-800 cursor-pointer">Saída Almoço</label>
+                    </div>
+                    <!-- Opção 3: Entrada Almoço -->
+                    <div class="flex items-center">
+                        <input id="tipo-entrada-almoco" name="tipoRegistro" type="radio" value="Entrada Almoço" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer">
+                        <label for="tipo-entrada-almoco" class="ml-3 block text-lg text-gray-800 cursor-pointer">Entrada Almoço</label>
+                    </div>
+                    <!-- Opção 4: Saída -->
+                    <div class="flex items-center">
+                        <input id="tipo-saida" name="tipoRegistro" type="radio" value="Saída" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer">
+                        <label for="tipo-saida" class="ml-3 block text-lg text-gray-800 cursor-pointer">Saída</label>
+                    </div>
+
+                </div>
+            </fieldset>
+        </div>
+        
+        <button id="abrirModalBtn" class="w-full bg-blue-600 text-white p-4 rounded-lg font-bold text-lg hover:bg-blue-700 transition-colors duration-300 shadow-lg">
+            Registrar Ponto
+        </button>
+        <!-- Mensagem de erro caso o nome ou tipo não seja selecionado -->
+        <div id="erroNome" class="text-red-600 font-semibold mt-4 h-6"></div>
+    </div>
+
+    <!-- 2. O MODAL DA CÂMERA (Oculto por padrão) -->
+    <div id="modalFoto" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4 transition-opacity duration-300 opacity-0">
+        
+        <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-2xl modal-content transform">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold text-gray-800">Tire sua foto para confirmar</h3>
+                <!-- Botão de fechar o modal -->
+                <span id="fecharModal" class="text-gray-500 text-3xl font-bold cursor-pointer hover:text-gray-800">&times;</span>
+            </div>
+            
+            <!-- A câmera -->
+            <video id="video" autoplay playsinline class="w-full h-auto max-h-[60vh] bg-gray-200 rounded-lg border border-gray-300 mb-4">Vídeo não disponível.</video>
+            
+            <!-- O Canvas é usado para "bater" a foto, mas fica oculto -->
+            <canvas id="canvas" class="hidden"></canvas>
+            
+            <button id="confirmarRegistroBtn" class="w-full bg-green-600 text-white p-4 rounded-lg font-bold text-lg hover:bg-green-700 transition-colors duration-300 shadow-lg">
+                Confirmar Ponto
+            </button>
+            
+            <!-- Div de Mensagens (Sucesso, Erro, Carregando) -->
+            <div id="mensagem" class="mt-4 font-semibold text-lg text-center h-6"></div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- PREPARAÇÃO ---
+        // URL Real do seu Google Apps Script (JÁ CONFIGURADA)
+        const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbyHeYRDwUzulSPUQ3nwh2kp9b_euSbK2jJxb09IGCQcyGb-JbCTG7Q6Z72nDdbJP_j2TA/exec";
+
+        // Referências aos elementos da página
+        const nomeSelect = document.getElementById('nomeSelect');
+        const abrirModalBtn = document.getElementById('abrirModalBtn');
+        const erroNome = document.getElementById('erroNome');
+        
+        // Elementos do Modal
+        const modal = document.getElementById('modalFoto');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const confirmarRegistroBtn = document.getElementById('confirmarRegistroBtn');
+        const mensagemDiv = document.getElementById('mensagem');
+        const fecharModalBtn = document.getElementById('fecharModal');
+        
+        let streamAtivo = null; // Variável para guardar o stream da câmera
+
+        // --- ETAPA 1: ABRIR O MODAL E LIGAR A CÂMERA ---
+        async function abrirModalECamera() {
+            // Pega o radio button de tipo que está selecionado
+            const tipoSelecionado = document.querySelector('input[name="tipoRegistro"]:checked');
+            
+            // 1. Verifica se AMBOS os campos foram selecionados
+            if (nomeSelect.value === "" || tipoSelecionado === null) {
+                erroNome.textContent = "Por favor, selecione nome e tipo.";
+                return;
+            }
+            erroNome.textContent = ""; // Limpa o erro
+
+            // 2. Mostra o modal com animação
+            modal.classList.remove('opacity-0');
+            
+            // 3. Reseta o estado do botão e da mensagem
+            mensagemDiv.textContent = "";
+            mensagemDiv.className = "mt-4 font-semibold text-lg text-center h-6";
+            confirmarRegistroBtn.disabled = false;
+            confirmarRegistroBtn.textContent = "Confirmar Ponto";
+
+            // 4. Liga a câmera
+            try {
+                streamAtivo = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'user' }, // Padrão para câmera frontal
+                    audio: false 
+                });
+                video.srcObject = streamAtivo;
+            } catch (err) {
+                console.error("Erro ao acessar a câmera: ", err);
+                mensagemDiv.textContent = "Erro ao acessar a câmera. Verifique as permissões.";
+                mensagemDiv.className = "mt-4 font-semibold text-lg text-red-600";
+            }
+        }
+        
+        // --- ETAPA 2: FECHAR O MODAL E DESLIGAR A CÂMERA ---
+        function fecharModal() {
+            modal.classList.add('opacity-0');
+            
+            // Desliga a câmera (MUITO IMPORTANTE para apagar a luzinha)
+            if (streamAtivo) {
+                streamAtivo.getTracks().forEach(track => track.stop());
+                streamAtivo = null;
+            }
+        }
+
+        // --- ETAPA 3: CONFIRMAR, TIRAR A FOTO, PEGAR LOCALIZAÇÃO E ENVIAR ---
+        async function enviarRegistro() {
+            // 1. Desabilita o botão e mostra "Carregando"
+            confirmarRegistroBtn.disabled = true;
+            confirmarRegistroBtn.textContent = "Registrando...";
+            mensagemDiv.textContent = "Processando sua foto...";
+            mensagemDiv.className = "mt-4 font-semibold text-lg text-gray-700";
+
+            // 2. Tira a foto (desenhando o vídeo no canvas)
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // 3. Converte a foto para o formato Base64 (texto) com 90% de qualidade
+            const fotoBase64 = canvas.toDataURL('image/jpeg', 0.9);
+            const nome = nomeSelect.value;
+            // Pega o valor do radio button selecionado
+            const tipo = document.querySelector('input[name="tipoRegistro"]:checked').value;
+
+            // 4. PEGA A LOCALIZAÇÃO
+            let latitude = "N/A";
+            let longitude = "N/A";
+            
+            try {
+                mensagemDiv.textContent = "Obtendo localização (aprove o pop-up)...";
+                // Pede a localização com timeout de 10 segundos
+                const position = await getGeolocation({ timeout: 10000 }); 
+                latitude = position.coords.latitude;
+                longitude = position.coords.longitude;
+                mensagemDiv.textContent = "Localização obtida. Enviando...";
+
+            } catch (err) {
+                console.warn("Erro ao obter localização: ", err.message);
+                // Se o usuário negar (code 1) ou der erro, o registro continua,
+                // mas salva a informação do erro na planilha.
+                latitude = (err.code === 1) ? "Permissão negada" : "Erro de localização";
+                longitude = "N/A";
+                mensagemDiv.textContent = "Localização falhou. Enviando registro...";
+            }
+
+            // 5. Envia os dados (incluindo localização) para o Google Apps Script
+            try {
+                const response = await fetch(URL_APPS_SCRIPT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8' 
+                    },
+                    body: JSON.stringify({
+                        nome: nome,
+                        fotoBase64: fotoBase64,
+                        tipo: tipo,
+                        latitude: latitude,   // DADO NOVO
+                        longitude: longitude  // DADO NOVO
+                    }),
+                });
+
+                const resultado = await response.json();
+                if (resultado.status !== 'sucesso') {
+                    // Se o Apps Script retornar um erro, mostra ele
+                    throw new Error(resultado.mensagem || "Erro desconhecido do servidor.");
+                }
+
+                // 6. Sucesso!
+                mensagemDiv.textContent = "Ponto registrado com sucesso!";
+                mensagemDiv.className = "mt-4 font-semibold text-lg text-green-600";
+
+                // Fecha o modal e limpa o nome após 2 segundos
+                setTimeout(() => {
+                    fecharModal();
+                    nomeSelect.value = ""; // Reseta a seleção de nome
+                    // Desmarca o radio button selecionado
+                    const tipoSelecionadoRadio = document.querySelector('input[name="tipoRegistro"]:checked');
+                    if (tipoSelecionadoRadio) {
+                        tipoSelecionadoRadio.checked = false;
+                    }
+                }, 2000);
+
+            } catch (err) {
+                // 7. Erro!
+                console.error("Erro ao registrar: ", err);
+                // Mostra a mensagem de erro específica
+                mensagemDiv.textContent = `Erro: ${err.message}. Tente novamente.`;
+                mensagemDiv.className = "mt-4 font-semibold text-lg text-red-600";
+                confirmarRegistroBtn.disabled = false; // Reabilita o botão
+                confirmarRegistroBtn.textContent = "Tentar Novamente";
+            }
+        }
+
+        // --- ETAPA 4: FUNÇÃO AUXILIAR DE GEOLOCALIZAÇÃO ---
+        // Esta função "embrulha" a API de geolocalização em uma Promise
+        // para que possamos usar 'await' e facilitar o código.
+        function getGeolocation(options) {
+            return new Promise((resolve, reject) => {
+                // Verifica se o navegador suporta geolocalização
+                if (!("geolocation" in navigator)) {
+                    return reject(new Error("Geolocalização não é suportada pelo seu navegador."));
+                }
+                // Pede a posição. Se der certo, chama 'resolve'. Se der erro, chama 'reject'.
+                navigator.geolocation.getCurrentPosition(resolve, reject, options);
+            });
+        }
+
+        // --- ATIVADORES (Event Listeners) ---
+        // Botão principal para abrir o modal
+        abrirModalBtn.addEventListener('click', abrirModalECamera);
+        
+        // Botão no modal para confirmar e enviar
+        confirmarRegistroBtn.addEventListener('click', enviarRegistro);
+        
+        // Botão 'X' para fechar o modal
+        fecharModalBtn.addEventListener('click', fecharModal);
+        
+        // Permite fechar o modal clicando fora da caixa branca
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                fecharModal();
+            }
+        });
+    </script>
+
+</body>
+</html>
+

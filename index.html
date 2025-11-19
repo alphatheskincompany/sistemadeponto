@@ -2,14 +2,11 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <!-- Garante que o site funcione bem em celulares -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro de Ponto</title>
     
-    <!-- Carrega o Tailwind CSS (para estilos) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // Configuração básica do Tailwind (usando a fonte Inter)
         tailwind.config = {
             theme: {
                 extend: {
@@ -21,7 +18,6 @@
         };
     </script>
     <style>
-        /* Ajuste para a animação do modal */
         #modalFoto.opacity-0 {
             pointer-events: none;
         }
@@ -35,11 +31,9 @@
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen font-sans">
 
-    <!-- 1. O FORMULÁRIO PRINCIPAL -->
     <div class="bg-white p-8 md:p-12 rounded-xl shadow-2xl text-center w-11/12 max-w-lg">
         <h2 class="text-3xl font-bold text-blue-700 mb-8">Registro de Ponto</h2>
         
-        <!-- Seletor de Funcionário -->
         <div class="text-left mb-6">
             <label for="nomeSelect" class="block mb-2 font-semibold text-gray-700">Funcionário:</label>
             <select id="nomeSelect" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg">
@@ -51,7 +45,6 @@
             </select>
         </div>
 
-        <!-- Seletor de Tipo de Registro (Radio Buttons) -->
         <div class="text-left mb-6">
             <label class="block mb-3 font-semibold text-gray-700">Tipo de Registro:</label>
             <fieldset id="tipoFieldset">
@@ -79,44 +72,36 @@
         <button id="abrirModalBtn" class="w-full bg-blue-600 text-white p-4 rounded-lg font-bold text-lg hover:bg-blue-700 transition-colors duration-300 shadow-lg">
             Registrar Ponto
         </button>
-        <!-- Mensagem de erro caso o nome ou tipo não seja selecionado -->
         <div id="erroNome" class="text-red-600 font-semibold mt-4 h-6"></div>
     </div>
 
-    <!-- 2. O MODAL DA CÂMERA (Oculto por padrão) -->
     <div id="modalFoto" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4 transition-opacity duration-300 opacity-0">
         
         <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-2xl modal-content transform">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-2xl font-bold text-gray-800">Tire sua foto para confirmar</h3>
-                <!-- Botão de fechar o modal -->
+                <h3 class="text-2xl font-bold text-gray-800">Tire sua foto</h3>
                 <span id="fecharModal" class="text-gray-500 text-3xl font-bold cursor-pointer hover:text-gray-800">&times;</span>
             </div>
             
-            <!-- A câmera -->
-            <video id="video" autoplay playsinline class="w-full h-auto max-h-[60vh] bg-gray-200 rounded-lg border border-gray-300 mb-4">Vídeo não disponível.</video>
+            <video id="video" autoplay playsinline class="w-full h-auto max-h-[60vh] bg-gray-200 rounded-lg border border-gray-300 mb-4 transform scale-x-[-1]" style="transform: scaleX(-1);"></video>
             
-            <!-- O Canvas é usado para "bater" a foto, mas fica oculto -->
             <canvas id="canvas" class="hidden"></canvas>
             
-            <button id="confirmarRegistroBtn" class="w-full bg-green-600 text-white p-4 rounded-lg font-bold text-lg hover:bg-green-700 transition-colors duration-300 shadow-lg">
+            <button id="confirmarRegistroBtn" class="w-full bg-green-600 text-white p-4 rounded-lg font-bold text-lg hover:bg-green-700 transition-colors duration-300 shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed">
                 Confirmar Ponto
             </button>
             
-            <!-- Div de Mensagens (Sucesso, Erro, Carregando) -->
             <div id="mensagem" class="mt-4 font-semibold text-lg text-center h-6"></div>
         </div>
     </div>
 
-
     <script>
-        // --- PREPARAÇÃO ---
+        // CONFIGURAÇÃO
         const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbyHeYRDwUzulSPUQ3nwh2kp9b_euSbK2jJxb09IGCQcyGb-JbCTG7Q6Z72nDdbJP_j2TA/exec";
 
         const nomeSelect = document.getElementById('nomeSelect');
         const abrirModalBtn = document.getElementById('abrirModalBtn');
         const erroNome = document.getElementById('erroNome');
-        
         const modal = document.getElementById('modalFoto');
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
@@ -124,9 +109,9 @@
         const mensagemDiv = document.getElementById('mensagem');
         const fecharModalBtn = document.getElementById('fecharModal');
         
-        let streamAtivo = null; 
+        let streamAtivo = null;
 
-        // --- ETAPA 1: ABRIR O MODAL E LIGAR A CÂMERA ---
+        // 1. ABRIR CÂMERA
         async function abrirModalECamera() {
             const tipoSelecionado = document.querySelector('input[name="tipoRegistro"]:checked');
             
@@ -134,105 +119,98 @@
                 erroNome.textContent = "Por favor, selecione nome e tipo.";
                 return;
             }
-            erroNome.textContent = "";
+            erroNome.textContent = ""; 
 
             modal.classList.remove('opacity-0');
+            mensagemDiv.textContent = "Ligando câmera...";
+            mensagemDiv.className = "mt-4 font-semibold text-lg text-center h-6 text-gray-600";
             
-            mensagemDiv.textContent = "";
-            mensagemDiv.className = "mt-4 font-semibold text-lg text-center h-6";
-            confirmarRegistroBtn.disabled = false;
-            confirmarRegistroBtn.textContent = "Confirmar Ponto";
+            confirmarRegistroBtn.disabled = true;
+            confirmarRegistroBtn.textContent = "Aguardando imagem...";
 
             try {
                 streamAtivo = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'user' },
+                    video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, 
                     audio: false 
                 });
-
                 video.srcObject = streamAtivo;
 
-                // Aguarda o vídeo carregar para garantir videoWidth / videoHeight
-                await new Promise((resolve) => {
-                    if (video.readyState >= 2 && video.videoWidth > 0) {
-                        resolve();
-                    } else {
-                        video.onloadedmetadata = () => resolve();
-                    }
-                });
+                // Aguarda o vídeo carregar para liberar o botão
+                video.onloadedmetadata = () => {
+                    video.play();
+                    confirmarRegistroBtn.disabled = false;
+                    confirmarRegistroBtn.textContent = "Confirmar Ponto";
+                    mensagemDiv.textContent = ""; 
+                };
+
             } catch (err) {
-                console.error("Erro ao acessar a câmera: ", err);
-                mensagemDiv.textContent = "Erro ao acessar a câmera. Verifique as permissões.";
+                console.error("Erro Câmera: ", err);
+                mensagemDiv.textContent = "Erro ao acessar câmera.";
                 mensagemDiv.className = "mt-4 font-semibold text-lg text-red-600";
             }
         }
         
-        // --- ETAPA 2: FECHAR O MODAL E DESLIGAR A CÂMERA ---
+        // 2. FECHAR
         function fecharModal() {
             modal.classList.add('opacity-0');
-            
             if (streamAtivo) {
                 streamAtivo.getTracks().forEach(track => track.stop());
                 streamAtivo = null;
             }
         }
 
-        // --- ETAPA 3: CONFIRMAR, TIRAR A FOTO, PEGAR LOCALIZAÇÃO E ENVIAR ---
+        // 3. PROCESSAR E ENVIAR (AQUI ESTÁ A CORREÇÃO DE BRILHO)
         async function enviarRegistro() {
+            if (video.videoWidth === 0 || video.videoHeight === 0) {
+                alert("Câmera carregando. Tente novamente em 2 segundos.");
+                return;
+            }
+
+            confirmarRegistroBtn.disabled = true;
+            confirmarRegistroBtn.textContent = "Registrando...";
+            mensagemDiv.textContent = "Tratando imagem e enviando...";
+            mensagemDiv.className = "mt-4 font-semibold text-lg text-gray-700";
+
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            // --- CORREÇÃO DE BRILHO ---
+            // Aqui aplicamos um filtro para clarear a foto digitalmente antes de salvar
+            // brightness(1.4) = aumenta brilho em 40%
+            // contrast(1.1) = aumenta contraste em 10% para não ficar lavado
+            context.filter = "brightness(1.4) contrast(1.1)";
+            
+            // Desenha a imagem (espelhada horizontalmente para ficar igual ao preview)
+            context.translate(canvas.width, 0);
+            context.scale(-1, 1);
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Reseta filtro e transformação
+            context.setTransform(1, 0, 0, 1, 0, 0);
+            context.filter = "none";
+
+            // Gera o código da imagem
+            const fotoBase64 = canvas.toDataURL('image/jpeg', 0.85);
+            
+            const nome = nomeSelect.value;
+            const tipo = document.querySelector('input[name="tipoRegistro"]:checked').value;
+
+            // Localização
+            let latitude = "N/A", longitude = "N/A";
             try {
-                if (!streamAtivo || !video.srcObject) {
-                    mensagemDiv.textContent = "Câmera não está ativa. Feche e abra o registro novamente.";
-                    mensagemDiv.className = "mt-4 font-semibold text-lg text-red-600";
-                    return;
-                }
+                const position = await getGeolocation({ timeout: 8000 }); 
+                latitude = position.coords.latitude;
+                longitude = position.coords.longitude;
+            } catch (err) {
+                latitude = (err.code === 1) ? "Negado" : "Erro Loc";
+            }
 
-                confirmarRegistroBtn.disabled = true;
-                confirmarRegistroBtn.textContent = "Registrando...";
-                mensagemDiv.textContent = "Processando sua foto...";
-                mensagemDiv.className = "mt-4 font-semibold text-lg text-gray-700";
-
-                // Garante que o vídeo tenha dimensões válidas
-                if (!video.videoWidth || !video.videoHeight) {
-                    await new Promise((resolve) => {
-                        video.onloadedmetadata = () => resolve();
-                        setTimeout(resolve, 1000); // fallback
-                    });
-                }
-
-                if (!video.videoWidth || !video.videoHeight) {
-                    throw new Error("Câmera ainda não está pronta. Aguarde um momento e tente novamente.");
-                }
-
-                const context = canvas.getContext('2d');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                
-                const fotoBase64 = canvas.toDataURL('image/jpeg', 0.9);
-
-                const nome = nomeSelect.value;
-                const tipo = document.querySelector('input[name="tipoRegistro"]:checked').value;
-
-                let latitude = "N/A";
-                let longitude = "N/A";
-                
-                try {
-                    mensagemDiv.textContent = "Obtendo localização (aprove o pop-up)...";
-                    const position = await getGeolocation({ timeout: 10000 }); 
-                    latitude = position.coords.latitude;
-                    longitude = position.coords.longitude;
-                    mensagemDiv.textContent = "Localização obtida. Enviando...";
-                } catch (err) {
-                    console.warn("Erro ao obter localização: ", err.message);
-                    latitude = (err.code === 1) ? "Permissão negada" : "Erro de localização";
-                    longitude = "N/A";
-                    mensagemDiv.textContent = "Localização falhou. Enviando registro...";
-                }
-
+            // Envio
+            try {
                 const response = await fetch(URL_APPS_SCRIPT, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'text/plain;charset=utf-8'
-                    },
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({
                         nome: nome,
                         fotoBase64: fotoBase64,
@@ -242,58 +220,38 @@
                     }),
                 });
 
-                let resultado;
-                try {
-                    resultado = await response.json();
-                } catch (e) {
-                    throw new Error("Resposta inválida do servidor. Verifique o Apps Script.");
-                }
+                const resultado = await response.json();
+                if (resultado.status !== 'sucesso') throw new Error(resultado.mensagem);
 
-                if (resultado.status !== 'sucesso') {
-                    throw new Error(resultado.mensagem || "Erro desconhecido do servidor.");
-                }
-
-                mensagemDiv.textContent = "Ponto registrado com sucesso!";
+                mensagemDiv.textContent = "Sucesso!";
                 mensagemDiv.className = "mt-4 font-semibold text-lg text-green-600";
 
                 setTimeout(() => {
                     fecharModal();
-                    nomeSelect.value = "";
-                    const tipoSelecionadoRadio = document.querySelector('input[name="tipoRegistro"]:checked');
-                    if (tipoSelecionadoRadio) {
-                        tipoSelecionadoRadio.checked = false;
-                    }
+                    nomeSelect.value = ""; 
+                    const r = document.querySelector('input[name="tipoRegistro"]:checked');
+                    if (r) r.checked = false;
                 }, 2000);
 
             } catch (err) {
-                console.error("Erro ao registrar: ", err);
-                mensagemDiv.textContent = `Erro: ${err.message}. Tente novamente.`;
+                mensagemDiv.textContent = "Erro no envio. Tente novamente.";
                 mensagemDiv.className = "mt-4 font-semibold text-lg text-red-600";
-                confirmarRegistroBtn.disabled = false;
+                confirmarRegistroBtn.disabled = false; 
                 confirmarRegistroBtn.textContent = "Tentar Novamente";
             }
         }
 
-        // --- ETAPA 4: FUNÇÃO AUXILIAR DE GEOLOCALIZAÇÃO ---
         function getGeolocation(options) {
             return new Promise((resolve, reject) => {
-                if (!("geolocation" in navigator)) {
-                    return reject(new Error("Geolocalização não é suportada pelo seu navegador."));
-                }
+                if (!("geolocation" in navigator)) return reject(new Error("Sem suporte"));
                 navigator.geolocation.getCurrentPosition(resolve, reject, options);
             });
         }
 
-        // --- ATIVADORES (Event Listeners) ---
         abrirModalBtn.addEventListener('click', abrirModalECamera);
         confirmarRegistroBtn.addEventListener('click', enviarRegistro);
         fecharModalBtn.addEventListener('click', fecharModal);
-        
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                fecharModal();
-            }
-        });
+        modal.addEventListener('click', (e) => { if (e.target === modal) fecharModal(); });
     </script>
 
 </body>

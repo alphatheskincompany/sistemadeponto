@@ -55,30 +55,23 @@
         <div class="text-left mb-6">
             <label class="block mb-3 font-semibold text-gray-700">Tipo de Registro:</label>
             <fieldset id="tipoFieldset">
-                <!-- Layout em coluna (flex-col) -->
                 <div class="flex flex-col gap-y-3">
-                    
-                    <!-- Opção 1: Entrada -->
                     <div class="flex items-center">
                         <input id="tipo-entrada" name="tipoRegistro" type="radio" value="Entrada" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer">
                         <label for="tipo-entrada" class="ml-3 block text-lg text-gray-800 cursor-pointer">Entrada</label>
                     </div>
-                    <!-- Opção 2: Saída Almoço -->
                     <div class="flex items-center">
                         <input id="tipo-saida-almoco" name="tipoRegistro" type="radio" value="Saída Almoço" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer">
                         <label for="tipo-saida-almoco" class="ml-3 block text-lg text-gray-800 cursor-pointer">Saída Almoço</label>
                     </div>
-                    <!-- Opção 3: Entrada Almoço -->
                     <div class="flex items-center">
                         <input id="tipo-entrada-almoco" name="tipoRegistro" type="radio" value="Entrada Almoço" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer">
                         <label for="tipo-entrada-almoco" class="ml-3 block text-lg text-gray-800 cursor-pointer">Entrada Almoço</label>
                     </div>
-                    <!-- Opção 4: Saída -->
                     <div class="flex items-center">
                         <input id="tipo-saida" name="tipoRegistro" type="radio" value="Saída" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer">
                         <label for="tipo-saida" class="ml-3 block text-lg text-gray-800 cursor-pointer">Saída</label>
                     </div>
-
                 </div>
             </fieldset>
         </div>
@@ -118,15 +111,12 @@
 
     <script>
         // --- PREPARAÇÃO ---
-        // URL Real do seu Google Apps Script (JÁ CONFIGURADA)
         const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbyHeYRDwUzulSPUQ3nwh2kp9b_euSbK2jJxb09IGCQcyGb-JbCTG7Q6Z72nDdbJP_j2TA/exec";
 
-        // Referências aos elementos da página
         const nomeSelect = document.getElementById('nomeSelect');
         const abrirModalBtn = document.getElementById('abrirModalBtn');
         const erroNome = document.getElementById('erroNome');
         
-        // Elementos do Modal
         const modal = document.getElementById('modalFoto');
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
@@ -134,36 +124,41 @@
         const mensagemDiv = document.getElementById('mensagem');
         const fecharModalBtn = document.getElementById('fecharModal');
         
-        let streamAtivo = null; // Variável para guardar o stream da câmera
+        let streamAtivo = null; 
 
         // --- ETAPA 1: ABRIR O MODAL E LIGAR A CÂMERA ---
         async function abrirModalECamera() {
-            // Pega o radio button de tipo que está selecionado
             const tipoSelecionado = document.querySelector('input[name="tipoRegistro"]:checked');
             
-            // 1. Verifica se AMBOS os campos foram selecionados
             if (nomeSelect.value === "" || tipoSelecionado === null) {
                 erroNome.textContent = "Por favor, selecione nome e tipo.";
                 return;
             }
-            erroNome.textContent = ""; // Limpa o erro
+            erroNome.textContent = "";
 
-            // 2. Mostra o modal com animação
             modal.classList.remove('opacity-0');
             
-            // 3. Reseta o estado do botão e da mensagem
             mensagemDiv.textContent = "";
             mensagemDiv.className = "mt-4 font-semibold text-lg text-center h-6";
             confirmarRegistroBtn.disabled = false;
             confirmarRegistroBtn.textContent = "Confirmar Ponto";
 
-            // 4. Liga a câmera
             try {
                 streamAtivo = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'user' }, // Padrão para câmera frontal
+                    video: { facingMode: 'user' },
                     audio: false 
                 });
+
                 video.srcObject = streamAtivo;
+
+                // Aguarda o vídeo carregar para garantir videoWidth / videoHeight
+                await new Promise((resolve) => {
+                    if (video.readyState >= 2 && video.videoWidth > 0) {
+                        resolve();
+                    } else {
+                        video.onloadedmetadata = () => resolve();
+                    }
+                });
             } catch (err) {
                 console.error("Erro ao acessar a câmera: ", err);
                 mensagemDiv.textContent = "Erro ao acessar a câmera. Verifique as permissões.";
@@ -175,7 +170,6 @@
         function fecharModal() {
             modal.classList.add('opacity-0');
             
-            // Desliga a câmera (MUITO IMPORTANTE para apagar a luzinha)
             if (streamAtivo) {
                 streamAtivo.getTracks().forEach(track => track.stop());
                 streamAtivo = null;
@@ -184,76 +178,87 @@
 
         // --- ETAPA 3: CONFIRMAR, TIRAR A FOTO, PEGAR LOCALIZAÇÃO E ENVIAR ---
         async function enviarRegistro() {
-            // 1. Desabilita o botão e mostra "Carregando"
-            confirmarRegistroBtn.disabled = true;
-            confirmarRegistroBtn.textContent = "Registrando...";
-            mensagemDiv.textContent = "Processando sua foto...";
-            mensagemDiv.className = "mt-4 font-semibold text-lg text-gray-700";
-
-            // 2. Tira a foto (desenhando o vídeo no canvas)
-            const context = canvas.getContext('2d');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            // 3. Converte a foto para o formato Base64 (texto) com 90% de qualidade
-            const fotoBase64 = canvas.toDataURL('image/jpeg', 0.9);
-            const nome = nomeSelect.value;
-            // Pega o valor do radio button selecionado
-            const tipo = document.querySelector('input[name="tipoRegistro"]:checked').value;
-
-            // 4. PEGA A LOCALIZAÇÃO
-            let latitude = "N/A";
-            let longitude = "N/A";
-            
             try {
-                mensagemDiv.textContent = "Obtendo localização (aprove o pop-up)...";
-                // Pede a localização com timeout de 10 segundos
-                const position = await getGeolocation({ timeout: 10000 }); 
-                latitude = position.coords.latitude;
-                longitude = position.coords.longitude;
-                mensagemDiv.textContent = "Localização obtida. Enviando...";
+                if (!streamAtivo || !video.srcObject) {
+                    mensagemDiv.textContent = "Câmera não está ativa. Feche e abra o registro novamente.";
+                    mensagemDiv.className = "mt-4 font-semibold text-lg text-red-600";
+                    return;
+                }
 
-            } catch (err) {
-                console.warn("Erro ao obter localização: ", err.message);
-                // Se o usuário negar (code 1) ou der erro, o registro continua,
-                // mas salva a informação do erro na planilha.
-                latitude = (err.code === 1) ? "Permissão negada" : "Erro de localização";
-                longitude = "N/A";
-                mensagemDiv.textContent = "Localização falhou. Enviando registro...";
-            }
+                confirmarRegistroBtn.disabled = true;
+                confirmarRegistroBtn.textContent = "Registrando...";
+                mensagemDiv.textContent = "Processando sua foto...";
+                mensagemDiv.className = "mt-4 font-semibold text-lg text-gray-700";
 
-            // 5. Envia os dados (incluindo localização) para o Google Apps Script
-            try {
+                // Garante que o vídeo tenha dimensões válidas
+                if (!video.videoWidth || !video.videoHeight) {
+                    await new Promise((resolve) => {
+                        video.onloadedmetadata = () => resolve();
+                        setTimeout(resolve, 1000); // fallback
+                    });
+                }
+
+                if (!video.videoWidth || !video.videoHeight) {
+                    throw new Error("Câmera ainda não está pronta. Aguarde um momento e tente novamente.");
+                }
+
+                const context = canvas.getContext('2d');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                const fotoBase64 = canvas.toDataURL('image/jpeg', 0.9);
+
+                const nome = nomeSelect.value;
+                const tipo = document.querySelector('input[name="tipoRegistro"]:checked').value;
+
+                let latitude = "N/A";
+                let longitude = "N/A";
+                
+                try {
+                    mensagemDiv.textContent = "Obtendo localização (aprove o pop-up)...";
+                    const position = await getGeolocation({ timeout: 10000 }); 
+                    latitude = position.coords.latitude;
+                    longitude = position.coords.longitude;
+                    mensagemDiv.textContent = "Localização obtida. Enviando...";
+                } catch (err) {
+                    console.warn("Erro ao obter localização: ", err.message);
+                    latitude = (err.code === 1) ? "Permissão negada" : "Erro de localização";
+                    longitude = "N/A";
+                    mensagemDiv.textContent = "Localização falhou. Enviando registro...";
+                }
+
                 const response = await fetch(URL_APPS_SCRIPT, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'text/plain;charset=utf-8' 
+                        'Content-Type': 'text/plain;charset=utf-8'
                     },
                     body: JSON.stringify({
                         nome: nome,
                         fotoBase64: fotoBase64,
                         tipo: tipo,
-                        latitude: latitude,   // DADO NOVO
-                        longitude: longitude  // DADO NOVO
+                        latitude: latitude,
+                        longitude: longitude
                     }),
                 });
 
-                const resultado = await response.json();
+                let resultado;
+                try {
+                    resultado = await response.json();
+                } catch (e) {
+                    throw new Error("Resposta inválida do servidor. Verifique o Apps Script.");
+                }
+
                 if (resultado.status !== 'sucesso') {
-                    // Se o Apps Script retornar um erro, mostra ele
                     throw new Error(resultado.mensagem || "Erro desconhecido do servidor.");
                 }
 
-                // 6. Sucesso!
                 mensagemDiv.textContent = "Ponto registrado com sucesso!";
                 mensagemDiv.className = "mt-4 font-semibold text-lg text-green-600";
 
-                // Fecha o modal e limpa o nome após 2 segundos
                 setTimeout(() => {
                     fecharModal();
-                    nomeSelect.value = ""; // Reseta a seleção de nome
-                    // Desmarca o radio button selecionado
+                    nomeSelect.value = "";
                     const tipoSelecionadoRadio = document.querySelector('input[name="tipoRegistro"]:checked');
                     if (tipoSelecionadoRadio) {
                         tipoSelecionadoRadio.checked = false;
@@ -261,41 +266,29 @@
                 }, 2000);
 
             } catch (err) {
-                // 7. Erro!
                 console.error("Erro ao registrar: ", err);
-                // Mostra a mensagem de erro específica
                 mensagemDiv.textContent = `Erro: ${err.message}. Tente novamente.`;
                 mensagemDiv.className = "mt-4 font-semibold text-lg text-red-600";
-                confirmarRegistroBtn.disabled = false; // Reabilita o botão
+                confirmarRegistroBtn.disabled = false;
                 confirmarRegistroBtn.textContent = "Tentar Novamente";
             }
         }
 
         // --- ETAPA 4: FUNÇÃO AUXILIAR DE GEOLOCALIZAÇÃO ---
-        // Esta função "embrulha" a API de geolocalização em uma Promise
-        // para que possamos usar 'await' e facilitar o código.
         function getGeolocation(options) {
             return new Promise((resolve, reject) => {
-                // Verifica se o navegador suporta geolocalização
                 if (!("geolocation" in navigator)) {
                     return reject(new Error("Geolocalização não é suportada pelo seu navegador."));
                 }
-                // Pede a posição. Se der certo, chama 'resolve'. Se der erro, chama 'reject'.
                 navigator.geolocation.getCurrentPosition(resolve, reject, options);
             });
         }
 
         // --- ATIVADORES (Event Listeners) ---
-        // Botão principal para abrir o modal
         abrirModalBtn.addEventListener('click', abrirModalECamera);
-        
-        // Botão no modal para confirmar e enviar
         confirmarRegistroBtn.addEventListener('click', enviarRegistro);
-        
-        // Botão 'X' para fechar o modal
         fecharModalBtn.addEventListener('click', fecharModal);
         
-        // Permite fechar o modal clicando fora da caixa branca
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
                 fecharModal();
@@ -305,4 +298,3 @@
 
 </body>
 </html>
-
